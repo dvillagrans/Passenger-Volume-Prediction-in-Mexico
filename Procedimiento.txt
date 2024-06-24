@@ -1,0 +1,12 @@
+Buscar los datos
+Depuraros
+Guardarlos en un dataset independiente
+trabar con los 31 simultaneos
+hacer un pivot
+datos son obtect, convertirlos a numericos
+correccion del foramto "Total / Total"
+mover los archivos "viejos" a una carpeta
+renombrar los archivos nuevos
+cambiar las columnas de los meses a numeros para posteriormente el modelo
+
+
