@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────────
+   AVIATION THEME
+   Palette:
+     Background  #04080f  (cockpit darkness)
+     Amber       #f59e0b / #fbbf24  (instrument warning / HUD elements)
+     Radar green #22d3a5 / #10b981  (ATC radar screen glow)
+     Sky teal    #0ea5e9  (horizon indicator)
+     Warm white  #f0ead6  (paper / chart readout)
+   ────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #04080f;
+  --foreground: #e8e0cc;
 }
 
 @theme inline {
@@ -12,15 +22,79 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* ─── Glass – cockpit instrument panel feel ──────────────────────────────── */
+.glass {
+  background: rgba(10, 20, 35, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* ─── Radar grid pattern ─────────────────────────────────────────────────── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(34, 211, 165, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 165, 0.04) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* ─── Runway dashes (used as decorative separator) ───────────────────────── */
+.runway-dash {
+  background: repeating-linear-gradient(
+    90deg,
+    #f59e0b 0px, #f59e0b 24px,
+    transparent 24px, transparent 40px
+  );
+  height: 2px;
+}
+
+/* ─── Keyframe animations ────────────────────────────────────────────────── */
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.55; }
+}
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes plane-fly {
+  0%   { transform: translateX(-140px) translateY(8px); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateX(calc(100vw + 140px)) translateY(-24px); opacity: 0; }
+}
+
+@keyframes blink-beacon {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+
+@keyframes altitude-tick {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+.animate-radar-sweep  { animation: radar-sweep 6s linear infinite; }
+.animate-pulse-glow   { animation: pulse-glow 5s ease-in-out infinite; }
+.animate-gradient     { background-size: 200% 200%; animation: gradient-shift 9s ease infinite; }
+.animate-plane        { animation: plane-fly 14s linear infinite; }
+.animate-beacon       { animation: blink-beacon 1.4s ease-in-out infinite; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; }
+::-webkit-scrollbar-track { background: #04080f; }
+::-webkit-scrollbar-thumb { background: #1a3828; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #22d3a5; }
