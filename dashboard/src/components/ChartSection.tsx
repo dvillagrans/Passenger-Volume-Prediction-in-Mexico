@@ -20,7 +20,7 @@ const MODEL_NAMES: Record<string, string> = {
 export default function ChartSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const chartCardRef = useRef<HTMLDivElement>(null);
-  const { selectedModelId, highlightChart } = useModelContext();
+  const { selectedModelId, highlightTick } = useModelContext();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -42,7 +42,7 @@ export default function ChartSection() {
 
   // Cross-filtering highlight
   useEffect(() => {
-    if (!highlightChart || !chartCardRef.current) return;
+    if (highlightTick === 0 || !chartCardRef.current) return;
     const hex = MODEL_COLORS[selectedModelId] ?? "#00ff88";
     // Pulse del borde + glow efímero
     gsap.fromTo(
@@ -69,7 +69,7 @@ export default function ChartSection() {
       ease: "power2.in",
       delay: 1.0,
     });
-  }, [highlightChart, selectedModelId]);
+  }, [highlightTick, selectedModelId]);
 
   return (
     <section

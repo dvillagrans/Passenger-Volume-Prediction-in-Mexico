@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "@/lib/gsap";
 import { useModelContext, type ModelId } from "@/lib/ModelContext";
+import { useScrollContext } from "@/lib/ScrollContext";
 import { Play, Pause, RotateCcw, ZoomIn, ZoomOut, ChevronRight } from "lucide-react";
 
 const MIN_YEAR = 1992;
@@ -119,8 +120,8 @@ interface TooltipData {
 
 // ── Componente principal ────────────────────────────────────────────────────
 export default function SARIMATimeline() {
-  const { selectedModelId, setSelectedModelId, highlightChart, triggerChartHighlight } =
-    useModelContext();
+  const { selectedModelId, setSelectedModelId, triggerChartHighlight } = useModelContext();
+  const { lenis } = useScrollContext();
 
   const selectedIndex = models.findIndex((m) => m.id === selectedModelId);
   const [internalSelected, setInternalSelected] = useState(selectedIndex >= 0 ? selectedIndex : 1);
@@ -380,7 +381,12 @@ export default function SARIMATimeline() {
   // ── Cross-filtering: resaltar predicciones ──────────────────────────────
   const handleCrossFilter = () => {
     triggerChartHighlight();
-    document.getElementById("predicciones")?.scrollIntoView({ behavior: "smooth" });
+    const target = document.getElementById("predicciones");
+    if (target && lenis) {
+      lenis.scrollTo(target, { offset: -80, duration: 1.2 });
+    } else if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   // ── Ticks ───────────────────────────────────────────────────────────────

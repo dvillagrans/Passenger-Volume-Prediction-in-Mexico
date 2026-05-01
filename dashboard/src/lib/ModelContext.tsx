@@ -7,30 +7,37 @@ export type ModelId = "GLB-01" | "AM-438" | "VB-2712";
 interface ModelContextValue {
   selectedModelId: ModelId;
   setSelectedModelId: (id: ModelId) => void;
-  highlightChart: boolean;
+  highlightTick: number;
   triggerChartHighlight: () => void;
 }
 
 const ModelContext = createContext<ModelContextValue | null>(null);
 
-export function useModelContext() {
+export function useModelContext(): ModelContextValue {
   const ctx = useContext(ModelContext);
-  if (!ctx) throw new Error("useModelContext must be used inside ModelProvider");
+  if (!ctx) {
+    // Fallback defensivo para SSR / fuera de provider
+    return {
+      selectedModelId: "AM-438",
+      setSelectedModelId: () => {},
+      highlightTick: 0,
+      triggerChartHighlight: () => {},
+    };
+  }
   return ctx;
 }
 
 export function ModelProvider({ children }: { children: ReactNode }) {
   const [selectedModelId, setSelectedModelId] = useState<ModelId>("AM-438");
-  const [highlightChart, setHighlightChart] = useState(false);
+  const [highlightTick, setHighlightTick] = useState(0);
 
   const triggerChartHighlight = useCallback(() => {
-    setHighlightChart(true);
-    setTimeout(() => setHighlightChart(false), 1500);
+    setHighlightTick((t) => t + 1);
   }, []);
 
   return (
     <ModelContext.Provider
-      value={{ selectedModelId, setSelectedModelId, highlightChart, triggerChartHighlight }}
+      value={{ selectedModelId, setSelectedModelId, highlightTick, triggerChartHighlight }}
     >
       {children}
     </ModelContext.Provider>
