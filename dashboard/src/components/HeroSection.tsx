@@ -1,45 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useInView } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { gsap } from "@/lib/gsap";
 import RadarWidget from "./RadarWidget";
-
-function AnimatedCounter({
-  end,
-  suffix = "",
-  decimals = 0,
-}: {
-  end: number;
-  suffix?: string;
-  decimals?: number;
-}) {
-  const [value, setValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!inView) return;
-    const duration = 1800;
-    const frames = 60;
-    const step = end / frames;
-    let current = 0;
-    const interval = setInterval(() => {
-      current += step;
-      if (current >= end) {
-        setValue(end);
-        clearInterval(interval);
-      } else setValue(parseFloat(current.toFixed(decimals)));
-    }, duration / frames);
-    return () => clearInterval(interval);
-  }, [inView, end, decimals]);
-
-  return (
-    <span ref={ref}>
-      {decimals ? value.toFixed(decimals) : value.toLocaleString("es-MX")}
-      {suffix}
-    </span>
-  );
-}
 
 const statRows = [
   { code: "DATOS", value: 31, unit: "AÑOS HIST.", color: "var(--color-primary)" },
@@ -49,8 +12,146 @@ const statRows = [
 ];
 
 export default function HeroSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const badgeTextRef = useRef<HTMLSpanElement>(null);
+
+  // Decodificación de caracteres del badge
+  useEffect(() => {
+    const badge = badgeTextRef.current;
+    if (!badge) return;
+    const finalText = "FLT-2023/28";
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-";
+    let iterations = 0;
+    const maxIterations = finalText.length * 4;
+
+    const interval = setInterval(() => {
+      badge.textContent = finalText
+        .split("")
+        .map((char, idx) => {
+          if (idx < Math.floor(iterations / 4)) return char;
+          if (char === " " || char === "·") return char;
+          return chars[Math.floor(Math.random() * chars.length)];
+        })
+        .join("");
+      iterations++;
+      if (iterations >= maxIterations) {
+        badge.textContent = finalText;
+        clearInterval(interval);
+      }
+    }, 35);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Boot sequence GSAP
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ delay: 0.15 });
+
+      // 1. Badge línea
+      tl.from(".hero-badge-line", {
+        scaleX: 0,
+        transformOrigin: "left center",
+        duration: 0.4,
+        ease: "power2.inOut",
+      });
+
+      // 2. Badge subtitle
+      tl.from(".hero-badge-subtitle", {
+        opacity: 0,
+        duration: 0.3,
+        ease: "none",
+      }, "-=0.15");
+
+      // 3. Headline words
+      tl.from(".hero-word", {
+        y: -40,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.5,
+        ease: "power3.out",
+      }, "-=0.1");
+
+      // 4. Geo
+      tl.from(".hero-geo", {
+        opacity: 0,
+        x: -10,
+        duration: 0.4,
+        ease: "power2.out",
+      }, "-=0.2");
+
+      // 5. Description
+      tl.from(".hero-desc", {
+        opacity: 0,
+        y: 12,
+        duration: 0.5,
+        ease: "power2.out",
+      }, "-=0.2");
+
+      // 6. CTAs
+      tl.from(".hero-cta", {
+        opacity: 0,
+        y: 8,
+        stagger: 0.08,
+        duration: 0.4,
+        ease: "power2.out",
+      }, "-=0.2");
+
+      // 7. Panel border line scaleY
+      tl.from(".hero-panel-line", {
+        scaleY: 0,
+        transformOrigin: "top center",
+        duration: 0.6,
+        ease: "power3.inOut",
+      }, "-=0.6");
+
+      // 8. Radar
+      tl.from(".hero-radar", {
+        opacity: 0,
+        scale: 0.9,
+        duration: 0.5,
+        ease: "power2.out",
+      }, "-=0.4");
+
+      // 9. Stat rows
+      tl.from(".hero-stat-row", {
+        opacity: 0,
+        x: 10,
+        stagger: 0.08,
+        duration: 0.3,
+        ease: "power2.out",
+      }, "-=0.3");
+
+      // 10. Counter animation with snap
+      document.querySelectorAll(".hero-stat-value").forEach((el) => {
+        const target = parseInt(el.getAttribute("data-value") ?? "0");
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          duration: 1.2,
+          ease: "power2.out",
+          delay: 0.9,
+          snap: { val: 1 },
+          onUpdate: () => {
+            el.textContent = String(Math.round(obj.val));
+          },
+        });
+      });
+
+      // 11. Timestamp
+      tl.from(".hero-timestamp", {
+        opacity: 0,
+        duration: 0.3,
+        ease: "none",
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="hero"
       className="grid grid-cols-1 lg:grid-cols-[1fr_380px]"
       style={{
@@ -62,7 +163,7 @@ export default function HeroSection() {
         margin: "0 auto",
       }}
     >
-      {/* COLUMNA IZQUIERDA: contenido principal */}
+      {/* COLUMNA IZQUIERDA */}
       <div className="lg:pr-12" style={{ paddingRight: 0 }}>
         {/* Flight tag */}
         <div
@@ -74,6 +175,7 @@ export default function HeroSection() {
           }}
         >
           <span
+            ref={badgeTextRef}
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "11px",
@@ -87,7 +189,7 @@ export default function HeroSection() {
             FLT-2023/28
           </span>
           <div
-            className="hidden sm:block"
+            className="hidden sm:block hero-badge-line"
             style={{
               width: "40px",
               height: "1px",
@@ -95,7 +197,7 @@ export default function HeroSection() {
             }}
           />
           <span
-            className="hidden sm:inline"
+            className="hidden sm:inline hero-badge-subtitle"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "10px",
@@ -121,16 +223,14 @@ export default function HeroSection() {
             marginBottom: "8px",
           }}
         >
-          VOLUMEN
-          <br />
-          DE
-          <br />
-          <span style={{ color: "var(--color-primary)" }}>PASAJEROS</span>
+          <span className="hero-word" style={{ display: "block" }}>VOLUMEN</span>
+          <span className="hero-word" style={{ display: "block" }}>DE</span>
+          <span className="hero-word" style={{ display: "block", color: "var(--color-primary)" }}>PASAJEROS</span>
         </h1>
 
         {/* Subtítulo geográfico */}
         <div
-          className="flex-wrap"
+          className="flex-wrap hero-geo"
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: "14px",
@@ -151,6 +251,7 @@ export default function HeroSection() {
 
         {/* Descripción */}
         <p
+          className="hero-desc"
           style={{
             fontFamily: "var(--font-ui)",
             fontWeight: 300,
@@ -170,6 +271,7 @@ export default function HeroSection() {
         <div className="flex flex-col sm:flex-row" style={{ gap: "12px" }}>
           <a
             href="#predicciones"
+            className="hero-cta"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "12px",
@@ -201,6 +303,7 @@ export default function HeroSection() {
           </a>
           <a
             href="#metodologia"
+            className="hero-cta"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "12px",
@@ -233,9 +336,8 @@ export default function HeroSection() {
 
       {/* COLUMNA DERECHA: panel técnico */}
       <div
-        className="mt-12 lg:mt-0"
+        className="mt-12 lg:mt-0 relative"
         style={{
-          borderLeft: "1px solid var(--border-dim)",
           paddingLeft: "24px",
           height: "100%",
           display: "flex",
@@ -244,8 +346,21 @@ export default function HeroSection() {
           gap: "24px",
         }}
       >
+        {/* Border line animada */}
+        <div
+          className="hero-panel-line hidden lg:block"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: "1px",
+            background: "var(--border-dim)",
+          }}
+        />
+
         {/* Radar */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div className="hero-radar" style={{ display: "flex", justifyContent: "center" }}>
           <RadarWidget />
         </div>
 
@@ -261,6 +376,7 @@ export default function HeroSection() {
           {statRows.map(({ code, value, unit, color }) => (
             <div
               key={code}
+              className="hero-stat-row"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -281,6 +397,8 @@ export default function HeroSection() {
                 {code}
               </span>
               <span
+                className="hero-stat-value"
+                data-value={value}
                 style={{
                   fontFamily: "var(--font-mono)",
                   fontSize: "28px",
@@ -290,7 +408,7 @@ export default function HeroSection() {
                   lineHeight: 1,
                 }}
               >
-                <AnimatedCounter end={value} />
+                0
               </span>
               <span
                 style={{
@@ -309,6 +427,7 @@ export default function HeroSection() {
 
         {/* Timestamp */}
         <div
+          className="hero-timestamp"
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: "10px",
