@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plane, Menu, X } from "lucide-react";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 const links = ["PREDICCIONES", "MODELOS", "METODOLOGÍA", "ACERCA"];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id.toLowerCase());
@@ -14,9 +16,43 @@ export default function Navbar() {
     setOpen(false);
   };
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Barra de progreso de scroll
+      gsap.to(".nav-progress-bar", {
+        scaleX: 1,
+        ease: "none",
+        transformOrigin: "left center",
+        scrollTrigger: {
+          trigger: "body",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.3,
+        },
+      });
+
+      // Backdrop del nav al hacer scroll
+      ScrollTrigger.create({
+        start: "top -60px",
+        onToggle: (self) => {
+          gsap.to(navRef.current, {
+            backdropFilter: self.isActive ? "blur(12px)" : "blur(8px)",
+            borderBottomColor: self.isActive
+              ? "rgba(0,255,136,0.15)"
+              : "rgba(0,255,136,0.08)",
+            duration: 0.3,
+          });
+        },
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <>
       <nav
+        ref={navRef}
         style={{
           position: "fixed",
           top: 0,
@@ -33,6 +69,22 @@ export default function Navbar() {
         }}
         className="md:!px-12"
       >
+        {/* Barra de progreso */}
+        <div
+          className="nav-progress-bar"
+          style={{
+            position: "absolute",
+            bottom: "-1px",
+            left: 0,
+            right: 0,
+            height: "1px",
+            background: "#00ff88",
+            transform: "scaleX(0)",
+            transformOrigin: "left center",
+            boxShadow: "0 0 8px rgba(0,255,136,0.5)",
+          }}
+        />
+
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
