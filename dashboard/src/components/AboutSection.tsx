@@ -2,21 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
-import { Database, Calendar, Activity, Award } from "lucide-react";
 
-const contextItems = [
-  { icon: Database, label: "Hist. datos", val: "1992–2022", accent: "var(--color-primary)" },
-  { icon: Calendar, label: "Proyección", val: "2023–2028", accent: "var(--color-blue)" },
-  { icon: Activity, label: "Librería", val: "Statsmodels", accent: "var(--color-amber)" },
-  { icon: Award, label: "MAPE", val: "< 5%", accent: "var(--color-primary)" },
+const contextRows = [
+  { label: "HIST. DATOS", value: "1992–2022" },
+  { label: "PROYECCIÓN", value: "2023–2028" },
+  { label: "LIBRERÍA", value: "Statsmodels" },
+  { label: "MAPE", value: "< 5%" },
 ];
 
 const stackItems = [
-  { tech: "Python 3.11", role: "Análisis y modelado", pct: 100, color: "var(--color-primary)" },
-  { tech: "Statsmodels", role: "SARIMA · ajuste y forecast", pct: 90, color: "var(--color-blue)" },
-  { tech: "Pandas / NumPy", role: "Manipulación de datos", pct: 95, color: "var(--color-amber)" },
-  { tech: "Next.js + Recharts", role: "Dashboard interactivo", pct: 85, color: "var(--color-primary)" },
-  { tech: "Framer Motion", role: "Animaciones de UI", pct: 80, color: "var(--color-blue)" },
+  { name: "Python 3.11", desc: "Análisis y modelado", pct: 100 },
+  { name: "Statsmodels", desc: "SARIMA · ajuste y forecast", pct: 90 },
+  { name: "Pandas / NumPy", desc: "Manipulación de datos", pct: 95 },
+  { name: "Next.js + Recharts", desc: "Dashboard interactivo", pct: 85 },
+  { name: "GSAP + Lenis", desc: "Animaciones y scroll", pct: 80 },
 ];
 
 export default function AboutSection() {
@@ -49,77 +48,67 @@ export default function AboutSection() {
       style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
       <div
-        className="grid-cols-1 md:grid-cols-2 !p-6 md:!p-10"
+        className="grid-cols-1 md:grid-cols-2"
         style={{
-          position: "relative",
-          border: "1px solid var(--border-dim)",
-          background: "var(--bg-surface)",
-          padding: "40px",
           display: "grid",
-          gap: "48px",
-          overflow: "hidden",
+          gap: "0 80px",
+          borderTop: "1px solid var(--border-dim)",
+          paddingTop: "48px",
         }}
       >
-        {/* decorative top line */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "1px",
-            background:
-              "linear-gradient(90deg, transparent, var(--color-amber-dim), transparent)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            right: 0,
-            width: "320px",
-            height: "320px",
-            background: "var(--color-primary-muted)",
-            borderRadius: "50%",
-            filter: "blur(60px)",
-          }}
-        />
-
-        {/* Left */}
-        <div style={{ position: "relative" }}>
-          <span
+        {/* COLUMNA IZQUIERDA: contexto */}
+        <div>
+          <div
             style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "10px",
-              letterSpacing: "0.25em",
-              color: "var(--color-amber-dim)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "16px",
             }}
           >
-            CONTEXTO
-          </span>
+            <div
+              style={{
+                width: "24px",
+                height: "1px",
+                background: "var(--color-amber-dim)",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                color: "var(--color-amber)",
+                letterSpacing: "0.2em",
+              }}
+            >
+              CONTEXTO
+            </span>
+          </div>
+
           <h2
             style={{
               fontFamily: "var(--font-display)",
               fontWeight: 700,
-              fontSize: "clamp(22px, 4vw, 32px)",
+              fontSize: "clamp(28px, 3vw, 40px)",
               textTransform: "uppercase",
               color: "var(--text-primary)",
               letterSpacing: "-0.01em",
               lineHeight: 1,
-              margin: "8px 0 16px",
+              margin: "0 0 20px 0",
             }}
           >
             ACERCA DEL PROYECTO
           </h2>
+
           <p
             style={{
               fontFamily: "var(--font-ui)",
               fontWeight: 300,
               fontSize: "14px",
               color: "var(--text-secondary)",
-              lineHeight: 1.6,
-              marginBottom: "24px",
-              maxWidth: "420px",
+              lineHeight: 1.7,
+              margin: "0 0 36px 0",
+              maxWidth: "480px",
             }}
           >
             Análisis y proyección del tráfico aéreo de México mediante modelos
@@ -127,81 +116,86 @@ export default function AboutSection() {
             la pandemia COVID-2020 y la posterior recuperación del sector aviación.
           </p>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1px",
-              background: "var(--border-dim)",
-            }}
-          >
-            {contextItems.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={i}
+          {/* Metadata como tabla */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {contextRows.map(({ label, value }) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "12px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <span
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "12px",
-                    background: "var(--bg-elevated)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "10px",
+                    color: "var(--text-secondary)",
+                    letterSpacing: "0.12em",
                   }}
                 >
-                  <span style={{ color: item.accent }}>
-                    <Icon style={{ width: "14px", height: "14px" }} />
-                  </span>
-                  <div>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "9px",
-                        letterSpacing: "0.15em",
-                        color: "var(--text-tertiary)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "12px",
-                        fontWeight: 400,
-                        color: "var(--text-primary)",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {item.val}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  {label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "13px",
+                    color: "var(--text-primary)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right — stack */}
-        <div style={{ position: "relative" }}>
-          <span
+        {/* COLUMNA DERECHA: stack técnico */}
+        <div>
+          <div
             style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "10px",
-              letterSpacing: "0.25em",
-              color: "var(--color-primary-dim)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "32px",
             }}
           >
-            STACK TÉCNICO
-          </span>
-          <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            {stackItems.map((t, i) => (
-              <div key={i}>
+            <div
+              style={{
+                width: "24px",
+                height: "1px",
+                background: "var(--color-primary-dim)",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                color: "var(--color-primary)",
+                letterSpacing: "0.2em",
+              }}
+            >
+              STACK TÉCNICO
+            </span>
+          </div>
+
+          {stackItems.map(({ name, desc, pct }) => {
+            const isAmber = pct >= 95;
+            const barColor = isAmber ? "var(--color-amber)" : "var(--color-primary)";
+            const pctColor = isAmber ? "var(--color-amber)" : "var(--color-primary-dim)";
+
+            return (
+              <div key={name} style={{ marginBottom: "20px" }}>
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "4px",
+                    alignItems: "baseline",
+                    marginBottom: "6px",
                   }}
                 >
                   <div>
@@ -209,41 +203,41 @@ export default function AboutSection() {
                       style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: "12px",
-                        fontWeight: 400,
                         color: "var(--text-primary)",
+                        letterSpacing: "0.02em",
                       }}
                     >
-                      {t.tech}
+                      {name}
                     </span>
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",
                         fontSize: "10px",
-                        color: "var(--text-tertiary)",
-                        marginLeft: "8px",
+                        color: "var(--text-secondary)",
+                        letterSpacing: "0.05em",
+                        marginLeft: "10px",
                       }}
                     >
-                      {t.role}
+                      {desc}
                     </span>
                   </div>
                   <span
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontSize: "11px",
-                      fontWeight: 400,
-                      color: t.color,
+                      color: pctColor,
+                      letterSpacing: "0.05em",
                     }}
                   >
-                    {t.pct}%
+                    {pct}%
                   </span>
                 </div>
+
                 <div
                   style={{
-                    width: "100%",
                     height: "1px",
-                    background: "var(--text-tertiary)",
+                    background: "rgba(255,255,255,0.06)",
                     position: "relative",
-                    overflow: "hidden",
                   }}
                 >
                   <div
@@ -253,14 +247,32 @@ export default function AboutSection() {
                       left: 0,
                       top: 0,
                       height: "100%",
-                      width: `${t.pct}%`,
-                      background: t.color,
-                      boxShadow: `0 0 6px ${t.color}`,
+                      width: `${pct}%`,
+                      background: barColor,
+                      boxShadow: `0 0 6px ${barColor}40`,
                     }}
                   />
                 </div>
               </div>
-            ))}
+            );
+          })}
+
+          {/* MAPE al pie */}
+          <div
+            style={{
+              marginTop: "24px",
+              paddingTop: "16px",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "10px",
+              color: "var(--text-secondary)",
+              letterSpacing: "0.08em",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>PRECISIÓN GENERAL</span>
+            <span style={{ color: "var(--color-amber)" }}>MAPE &lt; 5%</span>
           </div>
         </div>
       </div>
