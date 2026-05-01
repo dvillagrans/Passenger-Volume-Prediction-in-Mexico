@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Barlow, Barlow_Condensed, Share_Tech_Mono } from "next/font/google";
+import { SmoothScrollProvider } from "@/components/SmoothScrollProvider";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -46,7 +47,9 @@ export default function RootLayout({
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} ${shareTechMono.variable} antialiased`}
       >
-        {children}
+        <SmoothScrollProvider>
+          {children}
+        </SmoothScrollProvider>
       </body>
     </html>
   );
