@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plane, Menu, X } from "lucide-react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
-const links = ["PREDICCIONES", "MODELOS", "METODOLOGÍA", "ACERCA"];
+const links = ["PREDICCIONES", "MODELOS", "TIMELINE", "METODOLOGÍA", "ACERCA"];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
