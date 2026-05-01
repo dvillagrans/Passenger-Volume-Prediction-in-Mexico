@@ -143,6 +143,13 @@ export default function Home() {
           <span className="w-1.5 h-1.5 rounded-full bg-[#22d3a5] animate-beacon" />
           <span className="text-[10px] text-[#22d3a5] tracking-widest">ATC ON</span>
         </div>
+        <a
+          href="https://dvillagrans.dev"
+          className="font-mono text-[10px] tracking-widest text-white/25 
+                     hover:text-[#00d4aa]/70 transition-colors ml-3"
+        >
+          ← dvillagrans.dev
+        </a>
       </motion.nav>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
