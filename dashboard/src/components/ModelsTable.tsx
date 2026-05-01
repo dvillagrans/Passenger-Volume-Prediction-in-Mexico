@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "@/lib/gsap";
 
 const rows = [
   {
@@ -40,9 +41,54 @@ const rows = [
 
 export default function ModelsTable() {
   const [hovered, setHovered] = useState<number | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".models-table-header", {
+        opacity: 0,
+        duration: 0.4,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 85%",
+          once: true,
+        },
+      });
+
+      gsap.from(".models-table-row", {
+        x: -20,
+        opacity: 0,
+        stagger: 0.08,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 80%",
+          once: true,
+        },
+      });
+
+      gsap.from(".fit-bar-fill", {
+        scaleX: 0,
+        transformOrigin: "left center",
+        stagger: 0.1,
+        duration: 0.8,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 70%",
+          once: true,
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
     <section
+      ref={sectionRef}
       id="modelos"
       className="px-4 py-12 md:px-12 md:py-20"
       style={{ maxWidth: "1400px", margin: "0 auto" }}
@@ -98,6 +144,7 @@ export default function ModelsTable() {
       >
         {/* Table header */}
         <div
+          className="models-table-header"
           style={{
             display: "grid",
             gridTemplateColumns: "80px 1fr 160px 120px 110px 70px 80px",
@@ -127,6 +174,7 @@ export default function ModelsTable() {
         {rows.map((row, i) => (
           <div
             key={row.id}
+            className="models-table-row"
             style={{
               display: "grid",
               gridTemplateColumns: "80px 1fr 160px 120px 110px 70px 80px",
@@ -235,6 +283,7 @@ export default function ModelsTable() {
                 }}
               >
                 <div
+                  className="fit-bar-fill"
                   style={{
                     position: "absolute",
                     left: 0,
@@ -242,7 +291,6 @@ export default function ModelsTable() {
                     height: "100%",
                     width: `${row.fit}%`,
                     background: row.color,
-                    transition: "width 0.8s ease-out",
                   }}
                 />
               </div>

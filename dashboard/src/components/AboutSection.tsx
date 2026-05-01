@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { gsap } from "@/lib/gsap";
 import { Database, Calendar, Activity, Award } from "lucide-react";
 
 const contextItems = [
@@ -18,8 +20,30 @@ const stackItems = [
 ];
 
 export default function AboutSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".stack-bar-fill", {
+        scaleX: 0,
+        transformOrigin: "left center",
+        stagger: 0.1,
+        duration: 1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 75%",
+          once: true,
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="acerca"
       className="px-4 py-12 md:px-12 md:py-20"
       style={{ maxWidth: "1400px", margin: "0 auto" }}
@@ -223,6 +247,7 @@ export default function AboutSection() {
                   }}
                 >
                   <div
+                    className="stack-bar-fill"
                     style={{
                       position: "absolute",
                       left: 0,

@@ -1,10 +1,33 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { gsap } from "@/lib/gsap";
 import PredictionChart from "./PredictionChart";
 
 export default function ChartSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".prediction-chart-wrapper", {
+        opacity: 0,
+        scale: 0.99,
+        duration: 0.8,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 80%",
+          once: true,
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="predicciones"
       className="px-4 py-12 md:px-12 md:py-20"
       style={{ maxWidth: "1400px", margin: "0 auto" }}
@@ -132,7 +155,7 @@ export default function ChartSection() {
               "linear-gradient(90deg, transparent, var(--color-primary-dim), transparent)",
           }}
         />
-        <div className="h-[300px] md:h-[420px]" style={{ width: "100%", position: "relative" }}>
+        <div className="prediction-chart-wrapper h-[300px] md:h-[420px]" style={{ width: "100%", position: "relative" }}>
           <PredictionChart />
         </div>
       </div>

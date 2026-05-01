@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { gsap } from "@/lib/gsap";
 import {
   Database,
   GitBranch,
@@ -39,8 +41,30 @@ const phases = [
 ];
 
 export default function MethodologySection() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".methodology-phase", {
+        y: 20,
+        opacity: 0,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 75%",
+          once: true,
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       id="metodologia"
       className="px-4 py-12 md:px-12 md:py-20"
       style={{ maxWidth: "1400px", margin: "0 auto" }}
@@ -96,6 +120,7 @@ export default function MethodologySection() {
           return (
             <div
               key={s.phase}
+              className="methodology-phase"
               style={{
                 display: "flex",
                 gap: "20px",
