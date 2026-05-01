@@ -42,7 +42,8 @@ export default function MethodologySection() {
   return (
     <section
       id="metodologia"
-      style={{ padding: "80px 48px", maxWidth: "1400px", margin: "0 auto" }}
+      className="px-4 py-12 md:px-12 md:py-20"
+      style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
       {/* Header */}
       <div style={{ marginBottom: "32px" }}>
@@ -76,7 +77,7 @@ export default function MethodologySection() {
           style={{
             fontFamily: "var(--font-display)",
             fontWeight: 700,
-            fontSize: "48px",
+            fontSize: "clamp(28px, 6vw, 48px)",
             textTransform: "uppercase",
             color: "var(--text-primary)",
             letterSpacing: "-0.01em",

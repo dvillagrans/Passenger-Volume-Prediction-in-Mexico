@@ -21,16 +21,17 @@ export default function AboutSection() {
   return (
     <section
       id="acerca"
-      style={{ padding: "80px 48px", maxWidth: "1400px", margin: "0 auto" }}
+      className="px-4 py-12 md:px-12 md:py-20"
+      style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
       <div
+        className="grid-cols-1 md:grid-cols-2 !p-6 md:!p-10"
         style={{
           position: "relative",
           border: "1px solid var(--border-dim)",
           background: "var(--bg-surface)",
           padding: "40px",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
           gap: "48px",
           overflow: "hidden",
         }}
@@ -76,7 +77,7 @@ export default function AboutSection() {
             style={{
               fontFamily: "var(--font-display)",
               fontWeight: 700,
-              fontSize: "32px",
+              fontSize: "clamp(22px, 4vw, 32px)",
               textTransform: "uppercase",
               color: "var(--text-primary)",
               letterSpacing: "-0.01em",

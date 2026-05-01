@@ -5,13 +5,13 @@ import { Plane } from "lucide-react";
 export default function Footer() {
   return (
     <footer
+      className="px-4 py-6 md:px-12 md:py-6 grid-cols-1 md:grid-cols-3 text-center md:text-left"
       style={{
         borderTop: "1px solid var(--border-dim)",
-        padding: "24px 48px",
         maxWidth: "1400px",
         margin: "0 auto",
         display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: "16px",
         alignItems: "center",
       }}
     >
@@ -57,7 +57,7 @@ export default function Footer() {
       </div>
 
       {/* Stack */}
-      <div style={{ textAlign: "center" }}>
+      <div className="md:text-center" style={{ textAlign: "left" }}>
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -71,7 +71,7 @@ export default function Footer() {
       </div>
 
       {/* Author */}
-      <div style={{ textAlign: "right" }}>
+      <div className="md:text-right" style={{ textAlign: "left" }}>
         <span
           style={{
             fontFamily: "var(--font-mono)",

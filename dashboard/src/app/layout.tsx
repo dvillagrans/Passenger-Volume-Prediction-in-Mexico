@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Barlow, Barlow_Condensed, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -33,6 +34,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} ${shareTechMono.variable} antialiased`}
       >

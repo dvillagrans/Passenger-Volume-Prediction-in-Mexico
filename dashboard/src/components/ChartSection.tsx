@@ -6,7 +6,8 @@ export default function ChartSection() {
   return (
     <section
       id="predicciones"
-      style={{ padding: "80px 48px", maxWidth: "1400px", margin: "0 auto" }}
+      className="px-4 py-12 md:px-12 md:py-20"
+      style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
       {/* Header bar — instrument panel style */}
       <div
@@ -131,7 +132,7 @@ export default function ChartSection() {
               "linear-gradient(90deg, transparent, var(--color-primary-dim), transparent)",
           }}
         />
-        <div style={{ height: "420px", width: "100%", position: "relative" }}>
+        <div className="h-[300px] md:h-[420px]" style={{ width: "100%", position: "relative" }}>
           <PredictionChart />
         </div>
       </div>
