@@ -1,3 +1,4 @@
+import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import ChartSection from "@/components/ChartSection";
@@ -9,22 +10,24 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--bg-base)",
-        color: "var(--text-primary)",
-        overflowX: "hidden",
-      }}
-    >
-      <Navbar />
-      <HeroSection />
-      <ChartSection />
-      <ModelsTable />
-      <SARIMATimeline />
-      <MethodologySection />
-      <AboutSection />
-      <Footer />
-    </div>
+    <Providers>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "var(--bg-base)",
+          color: "var(--text-primary)",
+          overflowX: "hidden",
+        }}
+      >
+        <Navbar />
+        <HeroSection />
+        <ChartSection />
+        <ModelsTable />
+        <SARIMATimeline />
+        <MethodologySection />
+        <AboutSection />
+        <Footer />
+      </div>
+    </Providers>
   );
 }

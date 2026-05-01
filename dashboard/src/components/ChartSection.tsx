@@ -2,10 +2,25 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
+import { useModelContext } from "@/lib/ModelContext";
 import PredictionChart from "./PredictionChart";
+
+const MODEL_COLORS: Record<string, string> = {
+  "GLB-01": "#4499ff",
+  "AM-438": "#ffaa00",
+  "VB-2712": "#00ff88",
+};
+
+const MODEL_NAMES: Record<string, string> = {
+  "GLB-01": "MODELO GLOBAL",
+  "AM-438": "AEROMÉXICO",
+  "VB-2712": "VIVA AEROBUS",
+};
 
 export default function ChartSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const chartCardRef = useRef<HTMLDivElement>(null);
+  const { selectedModelId, highlightChart } = useModelContext();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -24,6 +39,37 @@ export default function ChartSection() {
 
     return () => ctx.revert();
   }, []);
+
+  // Cross-filtering highlight
+  useEffect(() => {
+    if (!highlightChart || !chartCardRef.current) return;
+    const hex = MODEL_COLORS[selectedModelId] ?? "#00ff88";
+    // Pulse del borde + glow efímero
+    gsap.fromTo(
+      chartCardRef.current,
+      { borderColor: hex, boxShadow: `0 0 24px ${hex}30` },
+      {
+        borderColor: "var(--border-dim)",
+        boxShadow: "none",
+        duration: 1.2,
+        ease: "power3.out",
+        delay: 0.2,
+      },
+    );
+    // Indicador badge
+    gsap.fromTo(
+      ".crossfilter-badge",
+      { opacity: 0, y: 8 },
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", delay: 0.1 },
+    );
+    gsap.to(".crossfilter-badge", {
+      opacity: 0,
+      y: -4,
+      duration: 0.4,
+      ease: "power2.in",
+      delay: 1.0,
+    });
+  }, [highlightChart, selectedModelId]);
 
   return (
     <section
@@ -135,6 +181,7 @@ export default function ChartSection() {
 
       {/* Chart card */}
       <div
+        ref={chartCardRef}
         style={{
           position: "relative",
           border: "1px solid var(--border-dim)",
@@ -155,6 +202,29 @@ export default function ChartSection() {
               "linear-gradient(90deg, transparent, var(--color-primary-dim), transparent)",
           }}
         />
+
+        {/* Crossfilter badge */}
+        <div
+          className="crossfilter-badge"
+          style={{
+            position: "absolute",
+            top: "12px",
+            right: "16px",
+            zIndex: 10,
+            fontFamily: "var(--font-mono)",
+            fontSize: "9px",
+            letterSpacing: "0.12em",
+            color: MODEL_COLORS[selectedModelId] ?? "var(--color-primary)",
+            background: "rgba(4,6,8,0.9)",
+            border: `1px solid ${MODEL_COLORS[selectedModelId] ?? "var(--color-primary)"}40`,
+            padding: "3px 8px",
+            opacity: 0,
+            pointerEvents: "none",
+          }}
+        >
+          ← SINTONIZADO: {MODEL_NAMES[selectedModelId]}
+        </div>
+
         <div className="prediction-chart-wrapper h-[300px] md:h-[420px]" style={{ width: "100%", position: "relative" }}>
           <PredictionChart />
         </div>

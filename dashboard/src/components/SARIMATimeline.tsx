@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "@/lib/gsap";
+import { useModelContext, type ModelId } from "@/lib/ModelContext";
+import { Play, Pause, RotateCcw, ZoomIn, ZoomOut, ChevronRight } from "lucide-react";
 
 const MIN_YEAR = 1992;
 const MAX_YEAR = 2028;
-const RANGE = MAX_YEAR - MIN_YEAR; // 36
+const RANGE = MAX_YEAR - MIN_YEAR;
 
 const models = [
   {
-    id: "GLB-01",
+    id: "GLB-01" as ModelId,
     name: "MODELO GLOBAL",
     sub: "Mercado nacional total",
     trainStart: 1992,
@@ -22,9 +24,10 @@ const models = [
     period: "1992–2022",
     s: "12",
     fit: 82,
+    csv: null,
   },
   {
-    id: "AM-438",
+    id: "AM-438" as ModelId,
     name: "AEROMÉXICO",
     sub: "Líder del mercado · AM",
     trainStart: 1992,
@@ -37,9 +40,10 @@ const models = [
     period: "1992–2022",
     s: "12",
     fit: 89,
+    csv: null,
   },
   {
-    id: "VB-2712",
+    id: "VB-2712" as ModelId,
     name: "VIVA AEROBUS",
     sub: "Low-cost carrier · VB",
     trainStart: 2006,
@@ -52,27 +56,107 @@ const models = [
     period: "2006–2022",
     s: "12",
     fit: 91,
+    csv: null,
   },
 ];
 
-const events = [
-  { type: "line" as const, year: 2008.75, label: "CRISIS 2008", color: "var(--color-amber)", offsetY: 0 },
-  { type: "range" as const, start: 2019.9, end: 2021.5, label: "COVID", color: "rgba(255, 50, 50, 0.08)", offsetY: 0 },
-  { type: "line" as const, year: 2022.9, label: "RECUPERACIÓN", color: "var(--color-primary)", offsetY: 0 },
-];
-
-function scaleX(year: number, width: number) {
-  return ((year - MIN_YEAR) / RANGE) * width;
+interface TimelineEvent {
+  type: "line" | "range";
+  year?: number;
+  start?: number;
+  end?: number;
+  label: string;
+  color: string;
+  impact: string;
+  duration: string;
+  icon: string;
 }
 
+const events: TimelineEvent[] = [
+  {
+    type: "line",
+    year: 2008.75,
+    label: "CRISIS 2008",
+    color: "var(--color-amber)",
+    impact: "Caída estimada: −12% en tráfico aéreo nacional. Recesión hipotecaria global, crédito restringido, aerolíneas reducen rutas no rentables.",
+    duration: "2008–2009",
+    icon: "⬇",
+  },
+  {
+    type: "range",
+    start: 2019.9,
+    end: 2021.5,
+    label: "COVID-19",
+    color: "rgba(255, 50, 50, 0.08)",
+    impact: "Colapso: −58% tráfico en 2020. Cierre de fronteras, restricciones sanitarias globales. Recuperación parcial en H2 2021 con reapertura gradual.",
+    duration: "Mar 2020 – Jun 2021",
+    icon: "⚠",
+  },
+  {
+    type: "line",
+    year: 2022.9,
+    label: "RECUPERACIÓN",
+    color: "var(--color-primary)",
+    impact: "Recuperación total: +95% del tráfico pre-pandemia. Reapertura completa de fronteras, demanda acumulada impulsa crecimiento récord.",
+    duration: "2022–2023",
+    icon: "⬆",
+  },
+];
+
+// ── Escala según viewRange ──────────────────────────────────────────────────
+function scaleX(year: number, width: number, viewStart: number, viewEnd: number) {
+  return ((year - viewStart) / (viewEnd - viewStart)) * width;
+}
+
+// ── Tooltip: HUD flotante ───────────────────────────────────────────────────
+interface TooltipData {
+  x: number;
+  y: number;
+  title: string;
+  rows: [string, string][];
+  hex: string;
+}
+
+// ── Componente principal ────────────────────────────────────────────────────
 export default function SARIMATimeline() {
-  const [selected, setSelected] = useState(1); // AM-438 por defecto
+  const { selectedModelId, setSelectedModelId, highlightChart, triggerChartHighlight } =
+    useModelContext();
+
+  const selectedIndex = models.findIndex((m) => m.id === selectedModelId);
+  const [internalSelected, setInternalSelected] = useState(selectedIndex >= 0 ? selectedIndex : 1);
+
+  useEffect(() => {
+    const idx = models.findIndex((m) => m.id === selectedModelId);
+    if (idx >= 0) setInternalSelected(idx);
+  }, [selectedModelId]);
+
+  const setSelected = useCallback(
+    (i: number) => {
+      setInternalSelected(i);
+      setSelectedModelId(models[i].id);
+    },
+    [setSelectedModelId],
+  );
+
   const sectionRef = useRef<HTMLElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const svgContainerRef = useRef<HTMLDivElement>(null);
+  const chartSectionRef = useRef<HTMLElement | null>(null);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  // ── Estados ─────────────────────────────────────────────────────────────
   const [svgWidth, setSvgWidth] = useState(800);
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [viewRange, setViewRange] = useState<[number, number]>([1992, 2028]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playheadYear, setPlayheadYear] = useState(1992);
+  const [playSpeed, setPlaySpeed] = useState(1);
+  const [detailMode, setDetailMode] = useState<"model" | number>("model");
+  const [glitchTick, setGlitchTick] = useState(0);
 
-  const active = models[selected];
+  const active = models[internalSelected];
 
+  // ── Resize ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => {
       if (svgRef.current) {
@@ -84,6 +168,12 @@ export default function SARIMATimeline() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // ── Referencia a ChartSection para scroll suave ─────────────────────────
+  useEffect(() => {
+    chartSectionRef.current = document.getElementById("predicciones");
+  }, []);
+
+  // ── Animaciones iniciales GSAP ──────────────────────────────────────────
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".timeline-row", {
@@ -130,17 +220,175 @@ export default function SARIMATimeline() {
     return () => ctx.revert();
   }, []);
 
-  // Animación del panel de detalles al cambiar selección
+  // ── Animación panel de detalles al cambiar selección ────────────────────
   useEffect(() => {
-    gsap.fromTo(
-      ".detail-panel",
-      { opacity: 0, x: 8 },
-      { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }
-    );
-  }, [selected]);
+    if (detailPanelRef.current) {
+      gsap.fromTo(
+        detailPanelRef.current,
+        { opacity: 0, x: 8 },
+        { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" },
+      );
+    }
+  }, [internalSelected, detailMode]);
 
-  const yearTicks = [];
-  for (let y = MIN_YEAR; y <= MAX_YEAR; y += 2) {
+  // ── Glitch effect ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (glitchTick > 0 && sectionRef.current) {
+      const el = sectionRef.current.querySelector(".detail-panel-glitch") as HTMLElement;
+      if (el) {
+        gsap.fromTo(
+          el,
+          {
+            clipPath: "inset(0 0 0 0)",
+            x: 0,
+          },
+          {
+            keyframes: [
+              { clipPath: "inset(20% 0 70% 0)", x: -2, duration: 0.03 },
+              { clipPath: "inset(60% 0 30% 0)", x: 2, duration: 0.03 },
+              { clipPath: "inset(10% 0 80% 0)", x: -1, duration: 0.04 },
+              { clipPath: "inset(0 0 0 0)", x: 0, duration: 0.05 },
+            ],
+            ease: "none",
+          },
+        );
+      }
+    }
+  }, [glitchTick]);
+
+  // ── Playback loop ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isPlaying) return;
+    const stepMs = Math.max(30, 200 / playSpeed);
+    const interval = setInterval(() => {
+      setPlayheadYear((prev) => {
+        if (prev >= MAX_YEAR) {
+          setIsPlaying(false);
+          return prev;
+        }
+        const next = prev + 0.15;
+        // Actualizar barra de progreso del Navbar cada paso
+        return next > MAX_YEAR ? MAX_YEAR : next;
+      });
+    }, stepMs);
+    return () => clearInterval(interval);
+  }, [isPlaying, playSpeed]);
+
+  // Reset playhead cuando para
+  const handlePlayToggle = () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+    } else {
+      if (playheadYear >= MAX_YEAR - 0.1) setPlayheadYear(1992);
+      setIsPlaying(true);
+    }
+  };
+
+  const handleReset = () => {
+    setIsPlaying(false);
+    setPlayheadYear(1992);
+  };
+
+  // ── Zoom con rueda ──────────────────────────────────────────────────────
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const [vs, ve] = viewRange;
+      const span = ve - vs;
+      const zoomFactor = e.deltaY > 0 ? 1.15 : 0.85;
+      const newSpan = Math.max(4, Math.min(RANGE, span * zoomFactor));
+      // Centrar alrededor del cursor
+      if (svgContainerRef.current) {
+        const rect = svgContainerRef.current.getBoundingClientRect();
+        const mouseFrac = (e.clientX - rect.left) / rect.width;
+        const center = vs + span * mouseFrac;
+        const newStart = Math.max(MIN_YEAR, center - newSpan * mouseFrac);
+        const newEnd = Math.min(MAX_YEAR, newStart + newSpan);
+        setViewRange([newStart, newEnd > MAX_YEAR ? MAX_YEAR : newEnd]);
+      }
+    },
+    [viewRange],
+  );
+
+  // ── Drag / paneo ────────────────────────────────────────────────────────
+  const dragRef = useRef<{
+    active: boolean;
+    startX: number;
+    startRange: [number, number];
+  }>({ active: false, startX: 0, startRange: [1992, 2028] });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    dragRef.current = { active: true, startX: e.clientX, startRange: [...viewRange] };
+    if (svgContainerRef.current) svgContainerRef.current.style.cursor = "grabbing";
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragRef.current.active) return;
+      const dx = e.clientX - dragRef.current.startX;
+      if (svgContainerRef.current) {
+        const rect = svgContainerRef.current.getBoundingClientRect();
+        const span = dragRef.current.startRange[1] - dragRef.current.startRange[0];
+        const shift = -(dx / rect.width) * span;
+        let newStart = dragRef.current.startRange[0] + shift;
+        let newEnd = dragRef.current.startRange[1] + shift;
+        if (newStart < MIN_YEAR) {
+          newEnd = MIN_YEAR + span;
+          newStart = MIN_YEAR;
+        }
+        if (newEnd > MAX_YEAR) {
+          newStart = MAX_YEAR - span;
+          newEnd = MAX_YEAR;
+        }
+        setViewRange([newStart, newEnd]);
+      }
+    };
+    const onUp = () => {
+      dragRef.current.active = false;
+      if (svgContainerRef.current) svgContainerRef.current.style.cursor = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  // ── Tooltip handlers ────────────────────────────────────────────────────
+  const showTooltip = (
+    e: React.MouseEvent,
+    title: string,
+    rows: [string, string][],
+    hex: string,
+  ) => {
+    setTooltip({ x: e.clientX, y: e.clientY, title, rows, hex });
+  };
+  const hideTooltip = () => setTooltip(null);
+
+  // ── Click en evento histórico → detalle ─────────────────────────────────
+  const handleEventClick = (idx: number) => {
+    setDetailMode(idx);
+    // Pequeño pulso al panel
+    gsap.fromTo(
+      ".detail-panel-glitch",
+      { borderColor: events[idx].color, boxShadow: `0 0 16px ${events[idx].color}20` },
+      { borderColor: "var(--border-dim)", boxShadow: "none", duration: 0.6, ease: "power2.out" },
+    );
+  };
+
+  // ── Cross-filtering: resaltar predicciones ──────────────────────────────
+  const handleCrossFilter = () => {
+    triggerChartHighlight();
+    document.getElementById("predicciones")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // ── Ticks ───────────────────────────────────────────────────────────────
+  const [vs, ve] = viewRange;
+  const vSpan = ve - vs;
+  const yearTicks: number[] = [];
+  const tickStep = vSpan > 20 ? 4 : vSpan > 10 ? 2 : 1;
+  for (let y = Math.ceil(vs); y <= ve; y += tickStep) {
     yearTicks.push(y);
   }
 
@@ -156,7 +404,7 @@ export default function SARIMATimeline() {
       className="px-4 py-12 md:px-12 md:py-20"
       style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: "32px" }}>
         <div
           style={{
@@ -167,11 +415,7 @@ export default function SARIMATimeline() {
           }}
         >
           <div
-            style={{
-              width: "24px",
-              height: "1px",
-              background: "var(--color-primary-dim)",
-            }}
+            style={{ width: "24px", height: "1px", background: "var(--color-primary-dim)" }}
           />
           <span
             style={{
@@ -200,33 +444,30 @@ export default function SARIMATimeline() {
         </h2>
       </div>
 
-      {/* Layout: 3 columnas desktop, stack mobile */}
+      {/* ── Layout 3 columnas ───────────────────────────────────────────── */}
       <div
         className="grid grid-cols-1 lg:grid-cols-[200px_1fr_260px]"
         style={{ gap: "24px" }}
       >
-        {/* COLUMNA IZQUIERDA: Selector */}
+        {/* ── COL IZQ: Selector ─────────────────────────────────────────── */}
         <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible">
           {models.map((m, i) => (
             <button
               key={m.id}
-              onClick={() => setSelected(i)}
+              onClick={() => {
+                setSelected(i);
+                setGlitchTick((p) => p + 1);
+                setDetailMode("model");
+              }}
               className="timeline-row"
               style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "12px",
                 textAlign: "left",
                 padding: "12px 14px",
-                background:
-                  selected === i
-                    ? "var(--color-primary-muted)"
-                    : "transparent",
-                borderLeft:
-                  selected === i
-                    ? `2px solid ${m.hex}`
-                    : "2px solid transparent",
-                color:
-                  selected === i ? "var(--text-primary)" : "var(--text-secondary)",
+                background: internalSelected === i ? "var(--color-primary-muted)" : "transparent",
+                borderLeft: internalSelected === i ? `2px solid ${m.hex}` : "2px solid transparent",
+                color: internalSelected === i ? "var(--text-primary)" : "var(--text-secondary)",
                 cursor: "pointer",
                 transition: "all 0.15s",
                 whiteSpace: "nowrap",
@@ -234,12 +475,12 @@ export default function SARIMATimeline() {
                 minWidth: "140px",
               }}
               onMouseEnter={(e) => {
-                if (selected !== i) {
+                if (internalSelected !== i) {
                   e.currentTarget.style.background = "var(--bg-elevated)";
                 }
               }}
               onMouseLeave={(e) => {
-                if (selected !== i) {
+                if (internalSelected !== i) {
                   e.currentTarget.style.background = "transparent";
                 }
               }}
@@ -260,17 +501,22 @@ export default function SARIMATimeline() {
           ))}
         </div>
 
-        {/* COLUMNA CENTRAL: Gantt SVG */}
+        {/* ── COL CENTRAL: Gantt SVG ────────────────────────────────────── */}
         <div
+          ref={svgContainerRef}
           style={{
             border: "1px solid var(--border-dim)",
             background: "var(--bg-surface)",
             padding: "16px",
             overflow: "hidden",
             position: "relative",
+            cursor: viewRange[1] - viewRange[0] < RANGE ? "grab" : undefined,
+            userSelect: "none",
           }}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
         >
-          {/* top accent line */}
+          {/* top accent */}
           <div
             style={{
               position: "absolute",
@@ -278,10 +524,128 @@ export default function SARIMATimeline() {
               left: 0,
               right: 0,
               height: "1px",
-              background:
-                "linear-gradient(90deg, transparent, var(--color-primary-dim), transparent)",
+              background: "linear-gradient(90deg, transparent, var(--color-primary-dim), transparent)",
             }}
           />
+
+          {/* ── Playback controls ──────────────────────────────────────── */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "8px",
+              paddingBottom: "8px",
+              borderBottom: "1px solid rgba(255,255,255,0.04)",
+            }}
+          >
+            <button
+              onClick={handlePlayToggle}
+              style={{
+                background: "none",
+                border: "1px solid var(--border-dim)",
+                padding: "4px 8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "var(--text-primary)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+              {isPlaying ? "PAUSE" : "PLAY"}
+            </button>
+            <button
+              onClick={handleReset}
+              style={{
+                background: "none",
+                border: "1px solid var(--border-dim)",
+                padding: "4px 8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "var(--text-tertiary)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              <RotateCcw size={12} />
+              RESET
+            </button>
+            <div style={{ flex: 1 }} />
+            {/* Speed selector */}
+            {[1, 2, 4].map((s) => (
+              <button
+                key={s}
+                onClick={() => setPlaySpeed(s)}
+                style={{
+                  background: playSpeed === s ? "var(--color-primary-muted)" : "none",
+                  border: playSpeed === s ? `1px solid ${active.hex}40` : "1px solid transparent",
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  color: playSpeed === s ? active.color : "var(--text-tertiary)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                {s}x
+              </button>
+            ))}
+            {/* Cross-filter link */}
+            <button
+              onClick={handleCrossFilter}
+              title="Resaltar predicciones"
+              style={{
+                background: "none",
+                border: `1px solid ${active.hex}30`,
+                padding: "4px 8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: active.color,
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              <ChevronRight size={12} />
+              CHART
+            </button>
+            {/* Zoom indicators */}
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "9px",
+                color: "var(--text-tertiary)",
+                letterSpacing: "0.08em",
+                minWidth: "80px",
+                textAlign: "right",
+              }}
+            >
+              {vs.toFixed(0)}–{ve.toFixed(0)}
+            </span>
+            <button
+              onClick={() => setViewRange([1992, 2028])}
+              title="Reset zoom"
+              style={{
+                background: "none",
+                border: "1px solid var(--border-dim)",
+                padding: "2px 4px",
+                cursor: "pointer",
+                color: "var(--text-tertiary)",
+                display: "flex",
+              }}
+            >
+              <ZoomOut size={10} />
+            </button>
+          </div>
 
           <svg
             ref={svgRef}
@@ -290,9 +654,16 @@ export default function SARIMATimeline() {
             viewBox={`0 0 ${svgWidth} ${trackHeight}`}
             preserveAspectRatio="none"
           >
-            {/* Grid vertical cada 2 años */}
+            {/* ── Clip para playback: revela solo hasta playhead ──────── */}
+            <defs>
+              <clipPath id="playhead-clip">
+                <rect x={0} y={0} width={scaleX(playheadYear, svgWidth, vs, ve)} height={trackHeight} />
+              </clipPath>
+            </defs>
+
+            {/* Grid vertical */}
             {yearTicks.map((y) => {
-              const x = scaleX(y, svgWidth);
+              const x = scaleX(y, svgWidth, vs, ve);
               return (
                 <g key={y}>
                   <line
@@ -309,7 +680,7 @@ export default function SARIMATimeline() {
                     y={trackHeight - 4}
                     fill="var(--text-tertiary)"
                     fontFamily="var(--font-mono)"
-                    fontSize="9"
+                    fontSize="8"
                     textAnchor="middle"
                   >
                     {y}
@@ -320,18 +691,37 @@ export default function SARIMATimeline() {
 
             {/* Eventos históricos */}
             {events.map((ev, i) => {
-              if (ev.type === "line") {
-                const x = scaleX(ev.year, svgWidth);
+              if (ev.type === "line" && ev.year != null) {
+                const x = scaleX(ev.year, svgWidth, vs, ve);
                 return (
-                  <g key={i}>
+                  <g
+                    key={i}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleEventClick(i)}
+                    onMouseEnter={(e) =>
+                      showTooltip(
+                        e,
+                        ev.label,
+                        [
+                          ["IMPACTO", ev.impact.substring(0, 40) + "…"],
+                          ["DURACIÓN", ev.duration],
+                        ],
+                        ev.color,
+                      )
+                    }
+                    onMouseMove={(e) =>
+                      setTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null))
+                    }
+                    onMouseLeave={hideTooltip}
+                  >
                     <line
                       x1={x}
                       y1={4}
                       x2={x}
                       y2={trackHeight - 18}
                       stroke={ev.color}
-                      strokeWidth="1"
-                      opacity={0.6}
+                      strokeWidth="1.5"
+                      opacity={0.7}
                     />
                     <text
                       x={x}
@@ -340,18 +730,37 @@ export default function SARIMATimeline() {
                       fontFamily="var(--font-mono)"
                       fontSize="8"
                       textAnchor="middle"
-                      opacity={0.8}
+                      opacity={0.9}
                     >
-                      {ev.label}
+                      {ev.icon} {ev.label}
                     </text>
                   </g>
                 );
               }
-              // range (COVID)
-              const x1 = scaleX(ev.start, svgWidth);
-              const x2 = scaleX(ev.end, svgWidth);
+              // Range
+              const x1 = scaleX(ev.start!, svgWidth, vs, ve);
+              const x2 = scaleX(ev.end!, svgWidth, vs, ve);
               return (
-                <g key={i}>
+                <g
+                  key={i}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleEventClick(i)}
+                  onMouseEnter={(e) =>
+                    showTooltip(
+                      e,
+                      ev.label,
+                      [
+                        ["IMPACTO", ev.impact.substring(0, 40) + "…"],
+                        ["DURACIÓN", ev.duration],
+                      ],
+                      ev.color,
+                    )
+                  }
+                  onMouseMove={(e) =>
+                    setTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null))
+                  }
+                  onMouseLeave={hideTooltip}
+                >
                   <rect
                     x={x1}
                     y={4}
@@ -362,12 +771,12 @@ export default function SARIMATimeline() {
                   <text
                     x={(x1 + x2) / 2}
                     y={14}
-                    fill="rgba(255,255,255,0.4)"
+                    fill="rgba(255,255,255,0.45)"
                     fontFamily="var(--font-mono)"
                     fontSize="8"
                     textAnchor="middle"
                   >
-                    {ev.label}
+                    {ev.icon} {ev.label}
                   </text>
                 </g>
               );
@@ -376,14 +785,13 @@ export default function SARIMATimeline() {
             {/* Barras de modelos */}
             {models.map((m, i) => {
               const y = startY + i * barGap;
-              const trainX = scaleX(m.trainStart, svgWidth);
-              const trainW = scaleX(m.trainEnd, svgWidth) - trainX;
-              const forecastX = scaleX(m.trainEnd, svgWidth);
-              const forecastW = scaleX(m.forecastEnd, svgWidth) - forecastX;
+              const trainX = scaleX(m.trainStart, svgWidth, vs, ve);
+              const trainW = scaleX(m.trainEnd, svgWidth, vs, ve) - trainX;
+              const forecastX = scaleX(m.trainEnd, svgWidth, vs, ve);
+              const forecastW = scaleX(m.forecastEnd, svgWidth, vs, ve) - forecastX;
 
               return (
                 <g key={m.id}>
-                  {/* Label a la izquierda de la barra */}
                   <text
                     x={4}
                     y={y + barHeight / 2 + 3}
@@ -395,7 +803,7 @@ export default function SARIMATimeline() {
                     {m.id}
                   </text>
 
-                  {/* Barra de entrenamiento */}
+                  {/* Barra entrenamiento — interactive */}
                   <rect
                     className="train-bar"
                     x={trainX}
@@ -404,9 +812,26 @@ export default function SARIMATimeline() {
                     height={barHeight}
                     fill={m.hex}
                     opacity={0.35}
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={(e) =>
+                      showTooltip(
+                        e,
+                        `${m.id} · ENTRENAMIENTO`,
+                        [
+                          ["PERIODO", `${m.trainStart}–${m.trainEnd}`],
+                          ["AIC", m.aic],
+                          ["ORDEN", m.order],
+                        ],
+                        m.hex,
+                      )
+                    }
+                    onMouseMove={(e) =>
+                      setTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null))
+                    }
+                    onMouseLeave={hideTooltip}
                   />
 
-                  {/* Barra de forecast (dashed stroke) */}
+                  {/* Barra forecast — interactive */}
                   <rect
                     className="forecast-bar"
                     x={forecastX}
@@ -418,15 +843,85 @@ export default function SARIMATimeline() {
                     strokeWidth="1.5"
                     strokeDasharray="3 3"
                     opacity={0.6}
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={(e) =>
+                      showTooltip(
+                        e,
+                        `${m.id} · FORECAST`,
+                        [
+                          ["PERIODO", `${m.trainEnd}–${m.forecastEnd}`],
+                          ["AIC", m.aic],
+                          ["AJUSTE", `${m.fit}%`],
+                        ],
+                        m.hex,
+                      )
+                    }
+                    onMouseMove={(e) =>
+                      setTooltip((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : null))
+                    }
+                    onMouseLeave={hideTooltip}
                   />
+
+                  {/* Resaltar barra del modelo seleccionado */}
+                  {internalSelected === i && (
+                    <>
+                      <rect
+                        x={trainX - 1}
+                        y={y - 2}
+                        width={trainW + 2}
+                        height={barHeight + 4}
+                        fill="none"
+                        stroke={m.hex}
+                        strokeWidth="1"
+                        opacity={0.5}
+                        rx={0}
+                      />
+                      <rect
+                        x={forecastX - 1}
+                        y={y - 2}
+                        width={forecastW + 2}
+                        height={barHeight + 4}
+                        fill="none"
+                        stroke={m.hex}
+                        strokeWidth="1"
+                        opacity={0.5}
+                        strokeDasharray="2 2"
+                        rx={0}
+                      />
+                    </>
+                  )}
                 </g>
               );
             })}
+
+            {/* Playhead line */}
+            {isPlaying && (
+              <g>
+                <line
+                  x1={scaleX(playheadYear, svgWidth, vs, ve)}
+                  y1={0}
+                  x2={scaleX(playheadYear, svgWidth, vs, ve)}
+                  y2={trackHeight}
+                  stroke="var(--color-amber)"
+                  strokeWidth="1.5"
+                  opacity={0.9}
+                />
+                <text
+                  x={scaleX(playheadYear, svgWidth, vs, ve) + 4}
+                  y={12}
+                  fill="var(--color-amber)"
+                  fontFamily="var(--font-mono)"
+                  fontSize="9"
+                  opacity={0.9}
+                >
+                  {playheadYear.toFixed(1)}
+                </text>
+              </g>
+            )}
           </svg>
 
-          {/* Leyenda debajo del SVG */}
+          {/* ── Leyenda ─────────────────────────────────────────────────── */}
           <div
-            className="flex-wrap"
             style={{
               display: "flex",
               alignItems: "center",
@@ -434,6 +929,7 @@ export default function SARIMATimeline() {
               marginTop: "8px",
               paddingTop: "8px",
               borderTop: "1px solid rgba(255,255,255,0.04)",
+              flexWrap: "wrap",
             }}
           >
             <span
@@ -447,14 +943,7 @@ export default function SARIMATimeline() {
                 letterSpacing: "0.08em",
               }}
             >
-              <span
-                style={{
-                  width: "12px",
-                  height: "4px",
-                  background: "var(--text-secondary)",
-                  opacity: 0.4,
-                }}
-              />
+              <span style={{ width: "12px", height: "4px", background: "var(--text-secondary)", opacity: 0.4 }} />
               ENTRENAMIENTO
             </span>
             <span
@@ -489,21 +978,83 @@ export default function SARIMATimeline() {
                 letterSpacing: "0.08em",
               }}
             >
-              <span
-                style={{
-                  width: "1px",
-                  height: "8px",
-                  background: "var(--color-amber)",
-                }}
-              />
-              EVENTO CRÍTICO
+              <span style={{ width: "1px", height: "8px", background: "var(--color-amber)" }} />
+              EVENTO · CLICK
+            </span>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "9px",
+                color: "var(--text-tertiary)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              <span style={{ fontSize: "11px" }}>🖱</span>
+              SCROLL = ZOOM · DRAG = PAN
             </span>
           </div>
+
+          {/* ── Tooltip HUD ─────────────────────────────────────────────── */}
+          {tooltip && (
+            <div
+              style={{
+                position: "fixed",
+                left: tooltip.x + 16,
+                top: tooltip.y - 20,
+                background: "rgba(4, 6, 8, 0.97)",
+                border: `1px solid ${tooltip.hex}40`,
+                padding: "10px 14px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                color: "var(--text-primary)",
+                letterSpacing: "0.05em",
+                zIndex: 999,
+                pointerEvents: "none",
+                minWidth: "180px",
+                boxShadow: `0 4px 20px rgba(0,0,0,0.6)`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: tooltip.hex,
+                  letterSpacing: "0.1em",
+                  marginBottom: "6px",
+                  paddingBottom: "6px",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                {tooltip.title}
+              </div>
+              {tooltip.rows.map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    marginBottom: "2px",
+                  }}
+                >
+                  <span style={{ color: "var(--text-tertiary)", letterSpacing: "0.08em", fontSize: "9px" }}>
+                    {k}
+                  </span>
+                  <span style={{ color: "var(--text-primary)", fontSize: "10px", textAlign: "right" }}>
+                    {v}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* COLUMNA DERECHA: Panel de detalles */}
+        {/* ── COL DERECHA: Panel de detalles ────────────────────────────── */}
         <div
-          className="detail-panel"
+          ref={detailPanelRef}
+          className="detail-panel-glitch"
           style={{
             border: "1px solid var(--border-dim)",
             background: "var(--bg-surface)",
@@ -511,7 +1062,7 @@ export default function SARIMATimeline() {
             position: "relative",
           }}
         >
-          {/* top accent line en color del modelo */}
+          {/* top accent */}
           <div
             style={{
               position: "absolute",
@@ -519,152 +1070,309 @@ export default function SARIMATimeline() {
               left: 0,
               right: 0,
               height: "1px",
-              background: active.hex,
+              background:
+                detailMode === "model" ? active.hex : events[detailMode]?.color ?? "var(--border-dim)",
               opacity: 0.5,
             }}
           />
 
-          {/* Header del modelo */}
-          <div style={{ marginBottom: "20px" }}>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                color: active.color,
-                letterSpacing: "0.15em",
-              }}
-            >
-              {active.id}
-            </span>
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 700,
-                fontSize: "22px",
-                textTransform: "uppercase",
-                color: "var(--text-primary)",
-                letterSpacing: "-0.01em",
-                lineHeight: 1,
-                margin: "4px 0 0",
-              }}
-            >
-              {active.name}
-            </h3>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                color: "var(--text-tertiary)",
-                letterSpacing: "0.05em",
-                display: "block",
-                marginTop: "4px",
-              }}
-            >
-              {active.sub}
-            </span>
-          </div>
+          {detailMode === "model" ? (
+            <>
+              {/* Header modelo */}
+              <div style={{ marginBottom: "20px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "10px",
+                      color: active.color,
+                      letterSpacing: "0.15em",
+                    }}
+                  >
+                    {active.id}
+                  </span>
+                  <button
+                    onClick={() => setDetailMode(0)}
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "8px",
+                      color: "var(--text-tertiary)",
+                      letterSpacing: "0.08em",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textUnderlineOffset: "3px",
+                    }}
+                  >
+                    VER EVENTOS →
+                  </button>
+                </div>
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 700,
+                    fontSize: "22px",
+                    textTransform: "uppercase",
+                    color: "var(--text-primary)",
+                    letterSpacing: "-0.01em",
+                    lineHeight: 1,
+                    margin: "4px 0 0",
+                  }}
+                >
+                  {active.name}
+                </h3>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "10px",
+                    color: "var(--text-tertiary)",
+                    letterSpacing: "0.05em",
+                    display: "block",
+                    marginTop: "4px",
+                  }}
+                >
+                  {active.sub}
+                </span>
+              </div>
 
-          {/* Parámetros */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1px",
-              background: "rgba(255,255,255,0.04)",
-              marginBottom: "20px",
-            }}
-          >
-            {[
-              ["ORDEN", active.order],
-              ["AIC", active.aic],
-              ["PERÍODO", active.period],
-              ["SEASONAL", `s=${active.s}`],
-            ].map(([label, value]) => (
+              {/* Parámetros */}
               <div
-                key={label}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1px",
+                  background: "rgba(255,255,255,0.04)",
+                  marginBottom: "20px",
+                }}
+              >
+                {[
+                  ["ORDEN", active.order],
+                  ["AIC", active.aic],
+                  ["PERÍODO", active.period],
+                  ["SEASONAL", `s=${active.s}`],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 0",
+                      background: "var(--bg-surface)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "9px",
+                        color: "var(--text-tertiary)",
+                        letterSpacing: "0.12em",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "12px",
+                        color: "var(--text-primary)",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Gauge de ajuste */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "6px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "9px",
+                      color: "var(--text-tertiary)",
+                      letterSpacing: "0.15em",
+                    }}
+                  >
+                    AJUSTE
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "14px",
+                      color: active.color,
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {active.fit}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "2px",
+                    background: "rgba(255,255,255,0.06)",
+                    position: "relative",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      height: "100%",
+                      width: `${active.fit}%`,
+                      background: active.hex,
+                      boxShadow: `0 0 8px ${active.hex}40`,
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Detalle de evento histórico */
+            <div>
+              <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  padding: "10px 0",
-                  background: "var(--bg-surface)",
+                  marginBottom: "4px",
                 }}
               >
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
-                    fontSize: "9px",
+                    fontSize: "10px",
+                    color: events[detailMode]?.color ?? "var(--color-amber)",
+                    letterSpacing: "0.15em",
+                  }}
+                >
+                  EVENTO CRÍTICO
+                </span>
+                <button
+                  onClick={() => setDetailMode("model")}
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "8px",
                     color: "var(--text-tertiary)",
-                    letterSpacing: "0.12em",
+                    letterSpacing: "0.08em",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "3px",
                   }}
                 >
-                  {label}
-                </span>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "12px",
-                    color: "var(--text-primary)",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {value}
-                </span>
+                  ← VOLVER
+                </button>
               </div>
-            ))}
-          </div>
+              <h3
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                  textTransform: "uppercase",
+                  color: "var(--text-primary)",
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
+                  margin: "4px 0 12px",
+                }}
+              >
+                {events[detailMode]?.icon} {events[detailMode]?.label}
+              </h3>
 
-          {/* Gauge de ajuste */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "6px",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "9px",
-                  color: "var(--text-tertiary)",
-                  letterSpacing: "0.15em",
-                }}
-              >
-                AJUSTE
-              </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "14px",
-                  color: active.color,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {active.fit}%
-              </span>
-            </div>
-            <div
-              style={{
-                height: "2px",
-                background: "rgba(255,255,255,0.06)",
-                position: "relative",
-              }}
-            >
               <div
                 style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  height: "100%",
-                  width: `${active.fit}%`,
-                  background: active.hex,
-                  boxShadow: `0 0 8px ${active.hex}40`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1px",
+                  background: "rgba(255,255,255,0.04)",
+                  marginBottom: "16px",
                 }}
-              />
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 0",
+                    background: "var(--bg-surface)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "9px",
+                      color: "var(--text-tertiary)",
+                      letterSpacing: "0.12em",
+                    }}
+                  >
+                    DURACIÓN
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "12px",
+                      color: "var(--text-primary)",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {events[detailMode]?.duration}
+                  </span>
+                </div>
+              </div>
+
+              <p
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "12px",
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.6,
+                  margin: 0,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {events[detailMode]?.impact}
+              </p>
+
+              {/* Botón para ver en ChartSection */}
+              <button
+                onClick={handleCrossFilter}
+                style={{
+                  marginTop: "16px",
+                  width: "100%",
+                  background: "none",
+                  border: "1px solid var(--border-dim)",
+                  padding: "8px",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  color: active.color,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                }}
+              >
+                VER IMPACTO EN PREDICCIONES →
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </section>
