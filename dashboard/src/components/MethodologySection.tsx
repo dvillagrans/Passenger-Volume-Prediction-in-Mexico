@@ -2,41 +2,31 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
-import {
-  Database,
-  GitBranch,
-  Cpu,
-  BarChart2,
-} from "lucide-react";
 
 const phases = [
   {
-    phase: "A1",
-    icon: Database,
-    accent: "var(--color-primary)",
+    id: "01",
     title: "Recopilación de datos",
     desc: "Registros mensuales de la DGAC sobre pasajeros nacionales e internacionales 1992–2022. Fuente oficial de aeronáutica civil.",
+    tag: "DGAC · 1992–2022",
   },
   {
-    phase: "A2",
-    icon: GitBranch,
-    accent: "var(--color-blue)",
+    id: "02",
     title: "Limpieza y normalización",
-    desc: "Detección de outliers, imputación del periodo COVID-2020, segmentación por aerolínea y conversión a formato mensual.",
+    desc: "Detección de outliers, imputación del período COVID-2020, segmentación por aerolínea y conversión a formato mensual.",
+    tag: "PREPROCESSING",
   },
   {
-    phase: "A3",
-    icon: Cpu,
-    accent: "var(--color-amber)",
+    id: "03",
     title: "Identificación SARIMA",
     desc: "Análisis ACF/PACF, pruebas de estacionariedad (ADF, KPSS), selección óptima de parámetros (p,d,q)(P,D,Q)[12] por AIC/BIC.",
+    tag: "MODEL SELECTION",
   },
   {
-    phase: "A4",
-    icon: BarChart2,
-    accent: "var(--color-primary)",
+    id: "04",
     title: "Validación y proyección",
     desc: "Walk-forward cross-validation temporal. 60 puntos mensuales proyectados (2023–2028) con intervalos de confianza al 95%.",
+    tag: "FORECAST · IC 95%",
   },
 ];
 
@@ -70,7 +60,7 @@ export default function MethodologySection() {
       style={{ maxWidth: "1400px", margin: "0 auto" }}
     >
       {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
+      <div style={{ marginBottom: "48px" }}>
         <div
           style={{
             display: "flex",
@@ -101,7 +91,7 @@ export default function MethodologySection() {
           style={{
             fontFamily: "var(--font-display)",
             fontWeight: 700,
-            fontSize: "clamp(28px, 6vw, 48px)",
+            fontSize: "clamp(36px, 5vw, 56px)",
             textTransform: "uppercase",
             color: "var(--text-primary)",
             letterSpacing: "-0.01em",
@@ -113,96 +103,81 @@ export default function MethodologySection() {
         </h2>
       </div>
 
-      {/* Rows */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1px", background: "var(--border-dim)" }}>
-        {phases.map((s) => {
-          const Icon = s.icon;
-          return (
+      {/* Fases — paneles horizontales */}
+      <div style={{ borderTop: "1px solid var(--border-dim)" }}>
+        {phases.map((phase) => (
+          <div
+            key={phase.id}
+            className="methodology-phase"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "60px 1fr auto",
+              alignItems: "start",
+              gap: "0 32px",
+              padding: "28px 0",
+              borderBottom: "1px solid var(--border-dim)",
+              position: "relative",
+            }}
+          >
+            {/* Número de fase — fondo tipográfico */}
             <div
-              key={s.phase}
-              className="methodology-phase"
               style={{
-                display: "flex",
-                gap: "20px",
-                background: "var(--bg-surface)",
-                padding: "16px 20px",
-                alignItems: "flex-start",
-                transition: "background 0.15s",
-                cursor: "default",
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: "56px",
+                lineHeight: 1,
+                color: "var(--color-primary-glow)",
+                letterSpacing: "-0.02em",
+                userSelect: "none",
+                paddingTop: "2px",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "var(--color-primary-muted)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "var(--bg-surface)")
-              }
             >
-              {/* Phase badge */}
-              <div
+              {phase.id}
+            </div>
+
+            {/* Contenido */}
+            <div style={{ maxWidth: "640px" }}>
+              <h3
                 style={{
-                  flexShrink: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "6px",
-                  width: "40px",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  color: "var(--text-primary)",
+                  letterSpacing: "0.02em",
+                  margin: "0 0 10px 0",
                 }}
               >
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: `1px solid ${s.accent}40`,
-                    background: `${s.accent}10`,
-                    color: s.accent,
-                  }}
-                >
-                  <Icon style={{ width: "14px", height: "14px" }} />
-                </div>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "9px",
-                    letterSpacing: "0.1em",
-                    color: `${s.accent}80`,
-                  }}
-                >
-                  {s.phase}
-                </span>
-              </div>
-
-              <div style={{ paddingTop: "2px" }}>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontWeight: 400,
-                    fontSize: "14px",
-                    color: "var(--text-primary)",
-                    marginBottom: "4px",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {s.title}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontWeight: 300,
-                    fontSize: "13px",
-                    color: "var(--text-secondary)",
-                    lineHeight: 1.6,
-                    maxWidth: "640px",
-                  }}
-                >
-                  {s.desc}
-                </p>
-              </div>
+                {phase.title}
+              </h3>
+              <p
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontWeight: 300,
+                  fontSize: "13px",
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.65,
+                  margin: 0,
+                }}
+              >
+                {phase.desc}
+              </p>
             </div>
-          );
-        })}
+
+            {/* Tag técnico */}
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                color: "var(--color-primary-dim)",
+                letterSpacing: "0.12em",
+                whiteSpace: "nowrap",
+                paddingTop: "4px",
+              }}
+            >
+              {phase.tag}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
