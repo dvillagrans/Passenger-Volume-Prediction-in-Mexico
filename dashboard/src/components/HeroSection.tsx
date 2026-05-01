@@ -52,27 +52,25 @@ export default function HeroSection() {
   return (
     <section
       id="hero"
+      className="grid grid-cols-1 lg:grid-cols-[1fr_380px]"
       style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 380px",
-        gridTemplateRows: "auto",
         gap: 0,
         minHeight: "100vh",
-        padding: "80px 48px 48px",
+        padding: "80px 16px 48px",
         alignItems: "center",
         maxWidth: "1400px",
         margin: "0 auto",
       }}
     >
       {/* COLUMNA IZQUIERDA: contenido principal */}
-      <div style={{ paddingRight: "48px" }}>
+      <div className="lg:pr-12" style={{ paddingRight: 0 }}>
         {/* Flight tag */}
         <div
+          className="mb-6 lg:mb-8"
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: "12px",
-            marginBottom: "32px",
           }}
         >
           <span
@@ -83,11 +81,13 @@ export default function HeroSection() {
               padding: "3px 8px",
               border: "1px solid var(--border-normal)",
               letterSpacing: "0.12em",
+              flexShrink: 0,
             }}
           >
             FLT-2023/28
           </span>
           <div
+            className="hidden sm:block"
             style={{
               width: "40px",
               height: "1px",
@@ -95,6 +95,7 @@ export default function HeroSection() {
             }}
           />
           <span
+            className="hidden sm:inline"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "10px",
@@ -111,7 +112,7 @@ export default function HeroSection() {
           style={{
             fontFamily: "var(--font-display)",
             fontWeight: 700,
-            fontSize: "clamp(64px, 8vw, 110px)",
+            fontSize: "clamp(44px, 12vw, 110px)",
             lineHeight: 0.88,
             letterSpacing: "-0.01em",
             textTransform: "uppercase",
@@ -129,6 +130,7 @@ export default function HeroSection() {
 
         {/* Subtítulo geográfico */}
         <div
+          className="flex-wrap"
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: "14px",
@@ -165,7 +167,7 @@ export default function HeroSection() {
         </p>
 
         {/* CTAs */}
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div className="flex flex-col sm:flex-row" style={{ gap: "12px" }}>
           <a
             href="#predicciones"
             style={{
@@ -181,9 +183,11 @@ export default function HeroSection() {
               textDecoration: "none",
               display: "inline-flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               borderRadius: 0,
               transition: "box-shadow 0.2s",
+              whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.boxShadow =
@@ -209,9 +213,11 @@ export default function HeroSection() {
               textDecoration: "none",
               display: "inline-flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               borderRadius: 0,
               transition: "border-color 0.2s",
+              whiteSpace: "nowrap",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.borderColor = "var(--border-bright)")
@@ -227,9 +233,10 @@ export default function HeroSection() {
 
       {/* COLUMNA DERECHA: panel técnico */}
       <div
+        className="mt-12 lg:mt-0"
         style={{
           borderLeft: "1px solid var(--border-dim)",
-          paddingLeft: "32px",
+          paddingLeft: "24px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
