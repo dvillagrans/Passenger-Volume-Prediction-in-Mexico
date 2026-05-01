@@ -290,6 +290,36 @@ export default function SARIMATimeline() {
     setPlayheadYear(1992);
   };
 
+  // ── Scrubber drag ───────────────────────────────────────────────────────
+  const scrubTrackRef = useRef<HTMLDivElement>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isScrubbing || !scrubTrackRef.current) return;
+      const rect = scrubTrackRef.current.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      setPlayheadYear(MIN_YEAR + frac * RANGE);
+    };
+    const onUp = () => setIsScrubbing(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isScrubbing]);
+
+  const handleScrubDown = (e: React.MouseEvent) => {
+    setIsScrubbing(true);
+    setIsPlaying(false);
+    if (scrubTrackRef.current) {
+      const rect = scrubTrackRef.current.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      setPlayheadYear(MIN_YEAR + frac * RANGE);
+    }
+  };
+
   // ── Zoom con rueda ──────────────────────────────────────────────────────
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -534,123 +564,316 @@ export default function SARIMATimeline() {
             }}
           />
 
-          {/* ── Playback controls ──────────────────────────────────────── */}
+          {/* ═══ TACTICAL CONTROL DECK ═══════════════════════════════════ */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "8px",
-              paddingBottom: "8px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
+              marginBottom: "12px",
+              padding: "10px",
+              background: "var(--bg-elevated)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
             }}
           >
-            <button
-              onClick={handlePlayToggle}
+            {/* ── Row 1: Transport | Telemetry | Action ── */}
+            <div
               style={{
-                background: "none",
-                border: "1px solid var(--border-dim)",
-                padding: "4px 8px",
-                cursor: "pointer",
-                display: "flex",
+                display: "grid",
+                gridTemplateColumns: "1fr auto 1fr",
+                gap: "10px",
                 alignItems: "center",
-                gap: "4px",
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                letterSpacing: "0.08em",
+                marginBottom: "10px",
               }}
             >
-              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-              {isPlaying ? "PAUSE" : "PLAY"}
-            </button>
-            <button
-              onClick={handleReset}
-              style={{
-                background: "none",
-                border: "1px solid var(--border-dim)",
-                padding: "4px 8px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                color: "var(--text-tertiary)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                letterSpacing: "0.08em",
-              }}
-            >
-              <RotateCcw size={12} />
-              RESET
-            </button>
-            <div style={{ flex: 1 }} />
-            {/* Speed selector */}
-            {[1, 2, 4].map((s) => (
-              <button
-                key={s}
-                onClick={() => setPlaySpeed(s)}
+              {/* ■ TRANSPORT CONTROL */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {/* Play / Pause — hardware switch */}
+                <button
+                  onClick={handlePlayToggle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)";
+                  }}
+                  style={{
+                    position: "relative",
+                    background: "linear-gradient(180deg, #0d1117 0%, #05070a 100%)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.3)",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: isPlaying ? "#00ff88" : "var(--text-tertiary)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "9px",
+                    letterSpacing: "0.12em",
+                    transition: "border-color 0.15s",
+                  }}
+                >
+                  {/* LED */}
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: isPlaying ? "#00ff88" : "#330000",
+                      boxShadow: isPlaying
+                        ? "0 0 6px #00ff88, 0 0 2px #00ff88"
+                        : "inset 0 1px 2px rgba(0,0,0,0.5)",
+                      animation: isPlaying ? "ledPulse 0.8s ease-in-out infinite alternate" : "none",
+                    }}
+                  />
+                  {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+                  {isPlaying ? "PAUSE" : "PLAY"}
+                </button>
+
+                {/* Reset */}
+                <button
+                  onClick={handleReset}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)";
+                  }}
+                  style={{
+                    background: "linear-gradient(180deg, #0d1117 0%, #05070a 100%)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.3)",
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: "var(--text-tertiary)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "9px",
+                    letterSpacing: "0.12em",
+                    transition: "border-color 0.15s",
+                  }}
+                >
+                  <RotateCcw size={12} />
+                  RESET
+                </button>
+
+                {/* Throttle */}
+                <div
+                  style={{
+                    display: "flex",
+                    background: "rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(255,255,255,0.04)",
+                    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5)",
+                    padding: "2px",
+                  }}
+                >
+                  {[1, 2, 4].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setPlaySpeed(s)}
+                      style={{
+                        background:
+                          playSpeed === s
+                            ? "linear-gradient(180deg, rgba(0,255,136,0.15), rgba(0,255,136,0.05))"
+                            : "transparent",
+                        border: playSpeed === s ? "1px solid rgba(0,255,136,0.3)" : "1px solid transparent",
+                        boxShadow:
+                          playSpeed === s
+                            ? "inset 0 1px 0 rgba(255,255,255,0.1), 0 0 6px rgba(0,255,136,0.1)"
+                            : "none",
+                        padding: "3px 8px",
+                        cursor: "pointer",
+                        color: playSpeed === s ? "#00ff88" : "var(--text-tertiary)",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "9px",
+                        letterSpacing: "0.08em",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ■ HUD / TELEMETRY DISPLAY */}
+              <div
                 style={{
-                  background: playSpeed === s ? "var(--color-primary-muted)" : "none",
-                  border: playSpeed === s ? `1px solid ${active.hex}40` : "1px solid transparent",
-                  padding: "2px 6px",
-                  cursor: "pointer",
-                  color: playSpeed === s ? active.color : "var(--text-tertiary)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "10px",
-                  letterSpacing: "0.08em",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  background: "#020304",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  padding: "6px 16px",
+                  minWidth: "140px",
+                  position: "relative",
+                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.03)",
                 }}
               >
-                {s}x
-              </button>
-            ))}
-            {/* Cross-filter link */}
-            <button
-              onClick={handleCrossFilter}
-              title="Resaltar predicciones"
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "8px",
+                    color: "var(--text-tertiary)",
+                    letterSpacing: "0.2em",
+                    marginBottom: "2px",
+                  }}
+                >
+                  TELEMETRY
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "26px",
+                    fontWeight: 400,
+                    color:
+                      playheadYear > 2019.9 && playheadYear < 2021.5
+                        ? "#ff4444"
+                        : playheadYear > 2008.5 && playheadYear < 2009.5
+                        ? "var(--color-amber)"
+                        : "var(--color-primary)",
+                    letterSpacing: "0.05em",
+                    lineHeight: 1,
+                    textShadow:
+                      playheadYear > 2019.9 && playheadYear < 2021.5
+                        ? "0 0 10px rgba(255,68,68,0.3)"
+                        : playheadYear > 2008.5 && playheadYear < 2009.5
+                        ? "0 0 10px rgba(255,170,0,0.3)"
+                        : "0 0 10px rgba(0,255,136,0.2)",
+                    transition: "color 0.3s, text-shadow 0.3s",
+                  }}
+                >
+                  {playheadYear.toFixed(2)}
+                </span>
+              </div>
+
+              {/* ■ ACTION — Cross-filter */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end" }}>
+                <button
+                  onClick={handleCrossFilter}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget;
+                    el.style.borderColor = active.hex;
+                    el.style.boxShadow = `0 0 16px ${active.hex}30`;
+                    el.style.color = "#ffffff";
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget;
+                    el.style.borderColor = `${active.hex}40`;
+                    el.style.boxShadow = "none";
+                    el.style.color = active.color;
+                  }}
+                  style={{
+                    background: `linear-gradient(180deg, ${active.hex}10, ${active.hex}05)`,
+                    border: `1px solid ${active.hex}40`,
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    color: active.color,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "9px",
+                    letterSpacing: "0.12em",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  <ChevronRight size={12} />
+                  TARGET: CHART
+                </button>
+
+                {/* Zoom reset */}
+                <button
+                  onClick={() => setViewRange([1992, 2028])}
+                  title="Reset zoom"
+                  style={{
+                    background: "linear-gradient(180deg, #0d1117 0%, #05070a 100%)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 4px rgba(0,0,0,0.3)",
+                    padding: "6px",
+                    cursor: "pointer",
+                    color: "var(--text-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "border-color 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)";
+                  }}
+                >
+                  <ZoomOut size={12} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Row 2: SCRUBBER ── */}
+            <div
+              ref={scrubTrackRef}
+              onMouseDown={handleScrubDown}
               style={{
-                background: "none",
-                border: `1px solid ${active.hex}30`,
-                padding: "4px 8px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                color: active.color,
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                letterSpacing: "0.08em",
+                position: "relative",
+                height: "4px",
+                background: "rgba(255,255,255,0.04)",
+                cursor: isScrubbing ? "grabbing" : "grab",
+                borderRadius: 0,
+                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5)",
               }}
             >
-              <ChevronRight size={12} />
-              CHART
-            </button>
-            {/* Zoom indicators */}
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "9px",
-                color: "var(--text-tertiary)",
-                letterSpacing: "0.08em",
-                minWidth: "80px",
-                textAlign: "right",
-              }}
-            >
-              {vs.toFixed(0)}–{ve.toFixed(0)}
-            </span>
-            <button
-              onClick={() => setViewRange([1992, 2028])}
-              title="Reset zoom"
-              style={{
-                background: "none",
-                border: "1px solid var(--border-dim)",
-                padding: "2px 4px",
-                cursor: "pointer",
-                color: "var(--text-tertiary)",
-                display: "flex",
-              }}
-            >
-              <ZoomOut size={10} />
-            </button>
+              {/* Fill track */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  height: "100%",
+                  width: `${((playheadYear - MIN_YEAR) / RANGE) * 100}%`,
+                  background:
+                    playheadYear > 2019.9 && playheadYear < 2021.5
+                      ? "linear-gradient(90deg, #ff4444, #ff0000)"
+                      : "linear-gradient(90deg, var(--color-primary), var(--color-primary-dim))",
+                  boxShadow:
+                    playheadYear > 2019.9 && playheadYear < 2021.5
+                      ? "0 0 8px rgba(255,68,68,0.3)"
+                      : "0 0 8px rgba(0,255,136,0.2)",
+                  transition: "width 0.05s linear, background 0.3s",
+                }}
+              />
+              {/* Handle */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: `${((playheadYear - MIN_YEAR) / RANGE) * 100}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: "10px",
+                  height: "10px",
+                  background: "#ffffff",
+                  boxShadow: "0 0 6px rgba(255,255,255,0.4)",
+                  cursor: isScrubbing ? "grabbing" : "grab",
+                  transition: "left 0.05s linear",
+                }}
+              />
+              {/* Tick marks scrubber */}
+              {[1992, 2000, 2008, 2016, 2028].map((y) => (
+                <div
+                  key={y}
+                  style={{
+                    position: "absolute",
+                    left: `${((y - MIN_YEAR) / RANGE) * 100}%`,
+                    top: "-6px",
+                    bottom: "-6px",
+                    width: "1px",
+                    background: "rgba(255,255,255,0.08)",
+                  }}
+                />
+              ))}
+            </div>
           </div>
 
           <svg
@@ -1381,6 +1604,14 @@ export default function SARIMATimeline() {
           )}
         </div>
       </div>
+
+      {/* Keyframe global para LED parpadeante */}
+      <style>{`
+        @keyframes ledPulse {
+          0% { opacity: 0.4; box-shadow: 0 0 4px #00ff88; }
+          100% { opacity: 1; box-shadow: 0 0 10px #00ff88, 0 0 4px #00ff88; }
+        }
+      `}</style>
     </section>
   );
 }
